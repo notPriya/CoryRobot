@@ -28,6 +28,9 @@ boolean connected = false;
 
 //servoing variables
 float servoFactor;  // Ratio of screen to robot joint angles.
+float servoThreshold;  // Threshold for commanding servo positions.
+int oldPitch;
+int oldYaw;
 
 //fonts
 PFont font;
@@ -61,10 +64,10 @@ void setup() {
   
   //start camera. Set camera id to specify which camera.
   cam = new KetaiCamera(this, 320, 240, 24);
-  //cam.setCameraID(cameraID);
+  cam.setCameraID(cameraID);
   println("MEOW");
   cam.start();
-  
+    
   //Constants for face positioning.
   faceFactor = width/cam.width;
   threshold = 20 * faceFactor;  // Off by 20 pixels.
@@ -84,7 +87,7 @@ void draw() {
   /*--------connecting bluetooth----------*/
   
   //if the thing has not been connected yet
-  if (connected == true) // TODO FLIP
+  if (connected == true)
   {
     
     names = bluetooth.getDiscoveredDeviceNames();
@@ -134,7 +137,7 @@ void draw() {
   
   // If we have only found one face, but it isnt close to what we
   // had before, switch to tracking the new face.
-  if (faces.length == 1 & !foundFace) {
+  if (faces.length == 1 && !foundFace) {
     faceX = (faces[0].location.x-cam.width/2)*faceFactor;
     faceY = (faces[0].location.y-cam.height/2)*faceFactor;
     currentFaceX = faceX;
@@ -153,7 +156,7 @@ void draw() {
   if (foundFace)
   {
     //draw face looking at person.
-    background(color(0,90,90));
+    background(color(0,120,120));
     image(happy_eyes,width/2-currentFaceX,height/2+currentFaceY,height*.8,height*.8);
   }
   else
@@ -194,15 +197,22 @@ void draw() {
   }
 
   /*-----servo the robot head------*/
-  //if the thing has been connected and we actually have a camera
-  if(connected & cam.isStarted())
+  
+  // Calculate the desired robot joint angles.
+  int yaw = round(-currentFaceX * servoFactor) + 90;  // 0 -> 180
+  int pitch = round(currentFaceY * servoFactor) + 90;  // 0 -> 180
+  
+  //Send messages if the thing has been connected and we actually have a camera.
+  //Also, only send messages once the yaw and pitch have changed significantly.
+  if(connected && cam.isStarted() && (abs(oldPitch-pitch) > servoThreshold || abs(oldYaw - yaw) > servoThreshold))
   {
-    int yaw = round(-currentFaceX * servoFactor) + 90;  // 0 -> 180
-    int pitch = round(currentFaceY * servoFactor) + 90;  // 0 -> 180
     // Left Ear, Right Ear, Roll, Pitch, Yaw.
     String servo_pos = "90,60,90," + pitch + "," + yaw;
     bluetooth.broadcast(servo_pos.getBytes());
-  }  
+    
+    oldPitch = pitch;
+    oldYaw = yaw;
+  }
 }
 
 // Reinitialize camera by poking screen.
@@ -214,7 +224,7 @@ void mousePressed()
   }
   else
   {
-    cam.start();
+    cam.start();    
   }
 }
 
