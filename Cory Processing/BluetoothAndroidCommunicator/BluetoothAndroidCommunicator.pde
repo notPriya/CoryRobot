@@ -6,7 +6,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import ketai.net.bluetooth.*;
 import ketai.net.*;
-import oscP5.*;
+
 
 //font variables
 PFont font;
